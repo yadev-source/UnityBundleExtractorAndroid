@@ -33,7 +33,7 @@ chaquopy {
     defaultConfig {
         version = "3.11"
         pip {
-            install("UnityPy==1.7.1")
+            install("UnityPy==1.7.43")
             install("tqdm")
             install("lz4")
             install("Pillow")
