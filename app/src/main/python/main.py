@@ -1,22 +1,41 @@
 import os
-import ctypes
 import sys
+import shutil
+import ctypes
 
-# Preload native libs Chaquopy biar gak error dlopen
-def preload_libs():
-    base = "/data/data/com.yadev.ubea/files/chaquopy/AssetFinder"
-    # cari semua .so yang ada libjpeg_chaquopy
-    for root, dirs, files in os.walk(base):
+BASE = "/data/data/com.yadev.ubea/files/chaquopy/AssetFinder"
+
+def fix_native_libs():
+    pil_dir = None
+    libjpeg_src = None
+    # cari lokasi
+    for root, dirs, files in os.walk(BASE):
+        if "_imaging.so" in files and root.endswith("PIL"):
+            pil_dir = root
+        if "libjpeg_chaquopy.so" in files and libjpeg_src is None:
+            libjpeg_src = os.path.join(root, files[files.index("libjpeg_chaquopy.so")])
+        # preload semua chaquopy libs biar gak missing
         for f in files:
-            if f.startswith("libjpeg") or f.startswith("libopenjp2") or f.startswith("libxcb"):
+            if f.endswith("_chaquopy.so"):
                 try:
                     ctypes.CDLL(os.path.join(root, f))
                 except:
                     pass
+    
+    # copy libjpeg ke folder PIL biar _imaging.so bisa lihat via $ORIGIN
+    if pil_dir and libjpeg_src:
+        dest = os.path.join(pil_dir, "libjpeg_chaquopy.so")
+        if not os.path.exists(dest):
+            try:
+                shutil.copy(libjpeg_src, dest)
+                ctypes.CDLL(dest)
+            except Exception as e:
+                print(f"copy libjpeg failed: {e}")
 
-preload_libs()
+# jalanin fix SEBELUM import apapun
+fix_native_libs()
 
-# stub brotli kalau masih error
+# stub brotli
 try:
     import brotli
 except:
@@ -30,12 +49,13 @@ def hello():
 
 def test_unitypy():
     try:
-        # coba preload lagi sebelum import UnityPy
-        preload_libs()
+        fix_native_libs() # coba lagi sebelum import
         import UnityPy
-        info = f"UnityPy {UnityPy.__version__} loaded!\n"
-        info += "Pillow + libjpeg OK!\n"
-        info += "Ready to extract .bundle files!\n"
+        from PIL import Image
+        info = f"Python OK\n"
+        info += f"UnityPy {UnityPy.__version__} loaded!\n"
+        info += f"Pillow {Image.__version__} + libjpeg FIXED!\n"
+        info += "Siap extract .bundle!\n"
         return info
     except Exception as e:
         import traceback
