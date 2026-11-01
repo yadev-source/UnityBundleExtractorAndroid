@@ -9,63 +9,62 @@ def extract_bundle(bundle_path, output_dir):
     try:
         import UnityPy
         env = UnityPy.load(bundle_path)
-        
         file_name = os.path.basename(bundle_path)
-        result = f"Loaded: {file_name}\n"
-        result += f"Files in bundle: {len(env.files)}\n"
-        
         os.makedirs(output_dir, exist_ok=True)
         
-        # Hitung semua tipe object buat .unity3d
         type_count = {}
-        all_objects = list(env.objects)
-        for obj in all_objects:
-            t = obj.type.name
-            type_count[t] = type_count.get(t, 0) + 1
+        objs = list(env.objects)
+        for o in objs:
+            type_count[o.type.name] = type_count.get(o.type.name, 0) + 1
         
-        result += f"Total objects: {len(all_objects)}\n\nTypes found:\n"
-        for t, c in sorted(type_count.items()):
-            result += f" - {t}: {c}\n"
-        
-        result += f"\nExtracting...\n"
+        result = f"Loaded: {file_name}\nFiles: {len(env.files)}\nTotal: {len(objs)}\n\nTypes:\n"
+        for k,v in sorted(type_count.items()):
+            result += f"{k}: {v}\n"
         
         count = 0
-        # Buat folder khusus per tipe
-        for obj in all_objects:
+        errors = []
+        for obj in objs:
             try:
-                tname = obj.type.name
-                # Buat .unity3d kita extract semua yang penting
-                if tname in ["GameObject", "Transform", "MonoBehaviour", "TextAsset", "Mesh", "Texture2D", "AudioClip", "Shader", "Font", "Material", "MeshRenderer", "BoxCollider"]:
-                    data = obj.read()
-                    m_name = getattr(data, 'm_Name', f"{tname}_{obj.path_id}")
-                    if not m_name: m_name = f"{tname}_{obj.path_id}"
-                    
-                    # Save typetree sebagai json biar bisa dibaca
-                    try:
-                        tree = obj.read_typetree()
-                        # Bersihin nama file
-                        safe_name = "".join([c if c.isalnum() or c in "_-" else "_" for c in m_name])[:50]
-                        out_path = os.path.join(output_dir, f"{safe_name}_{tname}_{obj.path_id}.json")
-                        with open(out_path, 'w', encoding='utf-8', errors='ignore') as f:
-                            json.dump(tree, f, indent=2, ensure_ascii=False, default=str)
-                        count += 1
-                    except Exception as e:
-                        # Fallback txt
-                        safe_name = "".join([c if c.isalnum() or c in "_-" else "_" for c in m_name])[:50]
-                        out_path = os.path.join(output_dir, f"{safe_name}_{tname}_{obj.path_id}.txt")
-                        with open(out_path, 'w', encoding='utf-8', errors='ignore') as f:
-                            f.write(f"Name: {m_name}\nType: {tname}\nPathID: {obj.path_id}\n")
-                            f.write(f"Error typetree: {e}\n")
-                        count += 1
+                t = obj.type.name
+                # Buat .unity3d kita coba baca semua
+                data = obj.read()
+                name = getattr(data, 'm_Name', '') or f"{t}_{obj.path_id}"
+                safe = "".join(c if c.isalnum() or c in "_-." else "_" for c in name)[:80]
+                
+                # Coba typetree dulu
+                try:
+                    tree = obj.read_typetree()
+                    with open(os.path.join(output_dir, f"{safe}_{t}_{obj.path_id}.json"), 'w', encoding='utf-8', errors='ignore') as f:
+                        json.dump(tree, f, indent=2, ensure_ascii=False, default=str)
+                    count += 1
+                except Exception as e1:
+                    # Kalau typetree gagal, save info minimal
+                    with open(os.path.join(output_dir, f"{safe}_{t}_{obj.path_id}.txt"), 'w', encoding='utf-8', errors='ignore') as f:
+                        f.write(f"Name: {name}\nType: {t}\nPathID: {obj.path_id}\n\nData dir: {dir(data)}\n")
+                        # Coba tulis m_Name dll
+                        try:
+                            f.write(f"\nAttributes:\n")
+                            for attr in ['m_Name', 'm_Tag', 'm_Layer', 'm_IsActive']:
+                                if hasattr(data, attr):
+                                    f.write(f"{attr}: {getattr(data, attr)}\n")
+                        except:
+                            pass
+                    count += 1
+                    errors.append(f"{t} {name}: {e1}")
             except Exception as e:
+                errors.append(f"Fail {obj.type.name} {obj.path_id}: {e}")
                 continue
         
-        # Special handling buat Yin_beidong.unity3d
-        result += f"\nExtracted {count} objects to:\n{output_dir}\n"
-        result += f"\nTip: .unity3d biasanya isinya GameObject + MonoBehaviour\n"
-        result += f"Cek file .json buat liat data Yin_beidong!\n"
+        result += f"\nExtracted: {count}\nDir: {output_dir}\n"
+        if errors:
+            result += f"\nErrors (first 5):\n" + "\n".join(errors[:5])
+        
+        # Selalu bikin 1 file summary
+        with open(os.path.join(output_dir, "_summary.txt"), 'w') as f:
+            f.write(result)
+        
         return result
         
     except Exception as e:
         import traceback
-        return f"Extract failed: {e}\n{traceback.format_exc()}"
+        return f"FAILED: {e}\n{traceback.format_exc()}"
