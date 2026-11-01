@@ -15,6 +15,7 @@
         android:textColor="#FFFFFF"
         android:layout_marginBottom="16dp"/>
 
+    <!-- Cuma 1 baris tombol, 3 tombol sekaligus -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -25,13 +26,21 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="TEST UNITYPY"/>
+            android:text="TEST"/>
+
+        <Button
+            android:id="@+id/btnPick"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="PICK"
+            android:layout_marginStart="8dp"/>
 
         <Button
             android:id="@+id/btnCopy"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="COPY LOG"
+            android:text="COPY"
             android:layout_marginStart="8dp"/>
     </LinearLayout>
 
