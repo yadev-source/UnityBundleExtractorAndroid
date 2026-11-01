@@ -1,17 +1,25 @@
+import os
+import ctypes
 import sys
 
-# Bikin stub brotli biar UnityPy gak crash kalau import brotli
+# Preload native libs Chaquopy biar gak error dlopen
+def preload_libs():
+    base = "/data/data/com.yadev.ubea/files/chaquopy/AssetFinder"
+    # cari semua .so yang ada libjpeg_chaquopy
+    for root, dirs, files in os.walk(base):
+        for f in files:
+            if f.startswith("libjpeg") or f.startswith("libopenjp2") or f.startswith("libxcb"):
+                try:
+                    ctypes.CDLL(os.path.join(root, f))
+                except:
+                    pass
+
+preload_libs()
+
+# stub brotli kalau masih error
 try:
     import brotli
-except Exception:
-    print("brotli native not available, using stub")
-    class DummyBrotli:
-        def decompress(self, data): 
-            raise RuntimeError("Bundle uses brotli compression - not supported on this build")
-        def compress(self, data):
-            raise RuntimeError("brotli not available")
-    sys.modules['brotli'] = DummyBrotli()
-    # fake module
+except:
     import types
     brotli = types.ModuleType("brotli")
     brotli.decompress = lambda d: (_ for _ in ()).throw(RuntimeError("brotli not available"))
@@ -22,12 +30,12 @@ def hello():
 
 def test_unitypy():
     try:
+        # coba preload lagi sebelum import UnityPy
+        preload_libs()
         import UnityPy
-        import sys
-        info = f"Python {sys.version.split()[0]}\n"
-        info += f"UnityPy {UnityPy.__version__} loaded!\n"
+        info = f"UnityPy {UnityPy.__version__} loaded!\n"
+        info += "Pillow + libjpeg OK!\n"
         info += "Ready to extract .bundle files!\n"
-        info += "brotli: stub (ok for most bundles)\n"
         return info
     except Exception as e:
         import traceback

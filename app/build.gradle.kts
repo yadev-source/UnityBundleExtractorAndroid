@@ -41,7 +41,7 @@ chaquopy {
             install("UnityPy==1.7.43")
             install("tqdm")
             install("lz4")
-            install("Pillow==11.0.0")
+            install("Pillow") // <-- tanpa versi! biar Chaquopy pilih yang ada libjpeg_chaquopy.so
             install("pyfmodex==0.7.2")
             install("fsspec")
             install("tabulate")
