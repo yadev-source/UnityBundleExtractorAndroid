@@ -1,46 +1,69 @@
 import os
+import json
 
 def test_unitypy():
     import UnityPy
-    return f"UnityPy {UnityPy.__version__} loaded!\nBundle parsing READY!\n"
+    return f"UnityPy {UnityPy.__version__} loaded!\n.unity3d parsing READY!\n"
 
 def extract_bundle(bundle_path, output_dir):
     try:
         import UnityPy
         env = UnityPy.load(bundle_path)
         
-        result = f"Loaded: {os.path.basename(bundle_path)}\n"
-        result += f"Files: {len(env.files)}\n\n"
+        file_name = os.path.basename(bundle_path)
+        result = f"Loaded: {file_name}\n"
+        result += f"Files in bundle: {len(env.files)}\n"
         
-        count = 0
         os.makedirs(output_dir, exist_ok=True)
         
-        for obj in env.objects:
-            if obj.type.name in ["TextAsset", "MonoBehaviour", "Texture2D", "AudioClip"]:
-                try:
-                    data = obj.read()
-                    name = getattr(data, 'm_Name', f"obj_{obj.path_id}")
-                    
-                    if obj.type.name == "TextAsset":
-                        path = os.path.join(output_dir, f"{name}.txt")
-                        # TextAsset
-                        script = data.m_Script
-                        if isinstance(script, str):
-                            script = script.encode('utf-8', 'surrogateescape')
-                        with open(path, 'wb') as f:
-                            f.write(script if isinstance(script, bytes) else str(script).encode())
-                    
-                    elif obj.type.name == "Texture2D":
-                        # cuma info aja karena PIL dummy
-                        path = os.path.join(output_dir, f"{name}_info.txt")
-                        with open(path, 'w') as f:
-                            f.write(f"Texture: {name}\nWidth: {data.m_Width}\nHeight: {data.m_Height}\n")
-                    
-                    count += 1
-                except Exception as e:
-                    result += f"Skip {obj.type.name}: {e}\n"
+        # Hitung semua tipe object buat .unity3d
+        type_count = {}
+        all_objects = list(env.objects)
+        for obj in all_objects:
+            t = obj.type.name
+            type_count[t] = type_count.get(t, 0) + 1
         
-        result += f"\nExtracted {count} assets to:\n{output_dir}\n"
+        result += f"Total objects: {len(all_objects)}\n\nTypes found:\n"
+        for t, c in sorted(type_count.items()):
+            result += f" - {t}: {c}\n"
+        
+        result += f"\nExtracting...\n"
+        
+        count = 0
+        # Buat folder khusus per tipe
+        for obj in all_objects:
+            try:
+                tname = obj.type.name
+                # Buat .unity3d kita extract semua yang penting
+                if tname in ["GameObject", "Transform", "MonoBehaviour", "TextAsset", "Mesh", "Texture2D", "AudioClip", "Shader", "Font", "Material", "MeshRenderer", "BoxCollider"]:
+                    data = obj.read()
+                    m_name = getattr(data, 'm_Name', f"{tname}_{obj.path_id}")
+                    if not m_name: m_name = f"{tname}_{obj.path_id}"
+                    
+                    # Save typetree sebagai json biar bisa dibaca
+                    try:
+                        tree = obj.read_typetree()
+                        # Bersihin nama file
+                        safe_name = "".join([c if c.isalnum() or c in "_-" else "_" for c in m_name])[:50]
+                        out_path = os.path.join(output_dir, f"{safe_name}_{tname}_{obj.path_id}.json")
+                        with open(out_path, 'w', encoding='utf-8', errors='ignore') as f:
+                            json.dump(tree, f, indent=2, ensure_ascii=False, default=str)
+                        count += 1
+                    except Exception as e:
+                        # Fallback txt
+                        safe_name = "".join([c if c.isalnum() or c in "_-" else "_" for c in m_name])[:50]
+                        out_path = os.path.join(output_dir, f"{safe_name}_{tname}_{obj.path_id}.txt")
+                        with open(out_path, 'w', encoding='utf-8', errors='ignore') as f:
+                            f.write(f"Name: {m_name}\nType: {tname}\nPathID: {obj.path_id}\n")
+                            f.write(f"Error typetree: {e}\n")
+                        count += 1
+            except Exception as e:
+                continue
+        
+        # Special handling buat Yin_beidong.unity3d
+        result += f"\nExtracted {count} objects to:\n{output_dir}\n"
+        result += f"\nTip: .unity3d biasanya isinya GameObject + MonoBehaviour\n"
+        result += f"Cek file .json buat liat data Yin_beidong!\n"
         return result
         
     except Exception as e:
