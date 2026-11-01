@@ -6,6 +6,7 @@ plugins {
 android {
     namespace = "com.yadev.ubea"
     compileSdk = 36
+    ndkVersion = "27.0.12077973"
 
     defaultConfig {
         applicationId = "com.yadev.ubea"
@@ -19,10 +20,13 @@ android {
         }
     }
 
-    buildFeatures {
-        viewBinding = true
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 
+    buildFeatures { viewBinding = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -38,9 +42,9 @@ chaquopy {
             install("tqdm")
             install("lz4")
             install("Pillow==11.0.0")
-            install("brotli")
             install("pyfmodex==0.7.2")
             install("fsspec")
+            // brotli sengaja gak di-install - kita pakai stub
         }
     }
 }
