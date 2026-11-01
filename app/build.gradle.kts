@@ -12,7 +12,7 @@ android {
         applicationId = "com.yadev.ubea"
         minSdk = 24
         targetSdk = 34
-        versionCode = 12
+        versionCode = 13
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
@@ -46,6 +46,7 @@ chaquopy {
             install("tabulate")
             install("attrs")
             install("pycryptodome")
+            install("pillow")
             // Pillow sengaja gak di-install - kita pakai dummy di atas
         }
     }
