@@ -1,0 +1,3 @@
+# dummy
+class ImageFile:
+    pass
