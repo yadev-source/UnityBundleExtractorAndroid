@@ -44,7 +44,9 @@ chaquopy {
             install("Pillow==11.0.0")
             install("pyfmodex==0.7.2")
             install("fsspec")
-            // brotli sengaja gak di-install - kita pakai stub
+            install("tabulate")
+            install("attrs")
+            install("pycryptodome")
         }
     }
 }
